@@ -59,6 +59,7 @@ class Saliency:
         self.net.eval()
         warnings.filterwarnings(action='ignore', lineno=780)
         img_list = sorted(Path(src).rglob('*.png'))
+        # img_list = sorted(Path(src).rglob('*.jpg'))
         logging.info(f'load {len(img_list)} images from {str(src)}')
         process = tqdm(img_list)
         for img_p in process:

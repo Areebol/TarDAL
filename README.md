@@ -169,13 +169,13 @@ Under normal circumstances, you don't need to manually download the model parame
 ```shell
 # TarDAL-DT
 # use official tardal-dt infer config and save images to runs/tardal-dt
-python infer.py --cfg configs/official/tardal-dt.yaml --save_dir runs/tardal-dt
+python infer.py --cfg config/official/tardal-dt.yaml --save_dir runs/tardal-dt
 # TarDAL-TT
 # use official tardal-tt infer config and save images to runs/tardal-tt
-python infer.py --cfg configs/official/tardal-tt.yaml --save_dir runs/tardal-tt
+python infer.py --cfg config/official/tardal-tt.yaml --save_dir runs/tardal-tt
 # TarDAL-CT
 # use official tardal-ct infer config and save images to runs/tardal-ct
-python infer.py --cfg configs/official/tardal-ct.yaml --save_dir runs/tardal-ct
+python infer.py --cfg config/official/tardal-ct.yaml --save_dir runs/tardal-ct
 ```
 
 #### Train

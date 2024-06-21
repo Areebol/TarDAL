@@ -7,10 +7,13 @@ from kornia.color import ycbcr_to_rgb
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+import time
+from kornia.metrics import AverageMeter
 import loader
 from config import ConfigDict, from_dict
 from pipeline.fuse import Fuse
 from tools.dict_to_device import dict_to_device
+from kornia.losses import MS_SSIMLoss, ssim_loss
 
 
 class InferF:
@@ -54,10 +57,20 @@ class InferF:
     @torch.inference_mode()
     def run(self):
         p_l = tqdm(self.p_loader, total=len(self.p_loader), ncols=120)
+        inference_time = AverageMeter()
         for sample in p_l:
+            input_shape = sample['shape']
             sample = dict_to_device(sample, self.fuse.device)
+            start_time = time.time()
             # f_net forward
             fus = self.fuse.inference(ir=sample['ir'], vi=sample['vi'])
+            inference_time.update(time.time() - start_time)
+            # ssim loss
+            ir_ssim = ssim_loss(fus, sample['ir'], window_size=11)
+            vi_ssim = ssim_loss(fus, sample['vi'], window_size=11)
+            text = f"ssim/ir:{ir_ssim:.6f} ssim/vi:{vi_ssim:.6f}"
+            print(f"{sample['name']} {text}")
+            
             # recolor
             if self.data_t.color and self.config.inference.grayscale is False:
                 fus = torch.cat([fus, sample['cbcr']], dim=1)
@@ -65,5 +78,20 @@ class InferF:
             # save images
             self.data_t.pred_save(
                 fus, [self.save_dir / name for name in sample['name']],
-                shape=sample['shape']
+                shape=sample['shape'],
             )
+            # save mask images
+            if self.config.fuse.mask:
+                mask = self.fuse.generator.mask(sample['ir'],sample['vi'])
+                ir_mask_mean_value = torch.mean(mask[:,0,:,:])
+                vi_mask_mean_value = torch.mean(mask[:,1,:,:])
+                self.data_t.pred_save(
+                mask[:,0,:,:], [self.save_dir / f"ir_mask_{name}" for name in sample['name']],
+                shape=sample['shape'],
+                )
+                self.data_t.pred_save(
+                mask[:,0,:,:], [self.save_dir / f"vi_mask_{name}" for name in sample['name']],
+                shape=sample['shape'],
+                )
+        print(f'shape of sample : {input_shape}')
+        print(f'elapsed time for running {len(self.p_loader)} samples : {inference_time.avg}s')

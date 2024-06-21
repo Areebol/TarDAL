@@ -17,6 +17,7 @@ import loader
 from config import from_dict, ConfigDict
 from pipeline.fuse import Fuse
 from tools.dict_to_device import dict_to_device
+from kornia.color import ycbcr_to_rgb
 
 
 class TrainF:
@@ -24,7 +25,7 @@ class TrainF:
         # init logger
         log_f = '%(asctime)s | %(filename)s[line:%(lineno)d] | %(levelname)s | %(message)s'
         logging.basicConfig(level='INFO', format=log_f)
-        logging.info(f'TarDAL-v1 Training Script')
+        logging.info(f'TarDAL Training Script')
 
         # init config
         if isinstance(config, str) or isinstance(config, Path):
@@ -40,7 +41,7 @@ class TrainF:
 
         # wandb run
         wandb.login(key=wandb_key)  # wandb api key
-        runs = wandb.init(project='TarDAL-v1', config=config, mode=config.debug.wandb_mode)
+        runs = wandb.init(project='TarDAL', config=config, mode=config.debug.wandb_mode)
         self.runs = runs
 
         # init save folder
@@ -88,7 +89,9 @@ class TrainF:
         # init dataset & dataloader
         data_t = getattr(loader, config.dataset.name)  # dataset type
         t_dataset = data_t(root=config.dataset.root, mode='train', config=config)
-        v_dataset = data_t(root=config.dataset.root, mode='val', config=config)
+        v_data_t = getattr(loader, config.v_dataset.name)
+        self.v_data_t = v_data_t
+        v_dataset = v_data_t(root=config.v_dataset.root, mode='val', config=config)
         self.t_loader = DataLoader(
             t_dataset, batch_size=config.train.batch_size, shuffle=True,
             collate_fn=data_t.collate_fn, pin_memory=True, num_workers=config.train.num_workers,
@@ -145,14 +148,42 @@ class TrainF:
             d_t_l, d_d_l = disc_history[0].avg, disc_history[1].avg
             log_dict |= {'g/tot': g_l, 'g/src': src_l, 'g/adv': adv_l, 'g/tar': d_t_l, 'g/det': d_d_l, 'disc/tar': tar_l, 'disc/det': det_l}
             logging.info(f'Epoch {epoch}/{epochs} | Generator Loss: {g_l:.4f} | Source Loss: {src_l:.4f} | Adversarial Loss: {adv_l:.4f}')
-
+            # mask logs
+            if self.config.fuse.mask:
+                mask = self.fuse.generator.mask(sample['ir'],sample['vi'])
+                ir_mask_mean_value = torch.mean(mask[:,0,:,:])
+                vi_mask_mean_value = torch.mean(mask[:,1,:,:])
+                logging.info(f'Epoch {epoch}/{epochs} | mask/ir_mean: ({ir_mask_mean_value:.4f}/1.00) | mask/vi_mean: ({vi_mask_mean_value:.4f}/1.00)')
+                log_dict |= {'mask/ir_mean':ir_mask_mean_value,'mask/vi_mean':vi_mask_mean_value}
+                
             # eval (fuse: show in wandb)
             if epoch % e_interval == 0 or self.config.debug.fast_run:
                 e_l = tqdm(self.v_loader, disable=True)
                 for sample in e_l:
                     sample = dict_to_device(sample, self.fuse.device)
-                    fus = self.fuse.eval(ir=sample['ir'], vi=sample['vi'])
-                    log_dict |= {'fuse': wandb.Image(fus), 'mask': wandb.Image(sample['mask'])}
+                    fus = self.fuse.inference(ir=sample['ir'], vi=sample['vi'])
+                    # recolor
+                    if self.v_data_t.color:
+                        fus = torch.cat([fus, sample['cbcr']], dim=1)
+                        fus = ycbcr_to_rgb(fus)
+                    # visual and infrared
+                    if epoch == e_interval:
+                        log_dict |= { 'visual': wandb.Image(sample['vi']), 
+                                    'infrared':wandb.Image(sample['ir'])}
+                    # mask eval log
+                    if self.config.fuse.mask:
+                        mask = self.fuse.generator.mask(sample['ir'],sample['vi'])
+                        ir_mask_mean_value = torch.mean(mask[:,0,:,:])
+                        vi_mask_mean_value = torch.mean(mask[:,1,:,:])
+                        log_dict |= {'fuse': wandb.Image(fus),  
+                                     'ir_mask':wandb.Image(torch.unsqueeze(mask[:,0,:,:],dim=1)),
+                                     'vi_mask':wandb.Image(torch.unsqueeze(mask[:,1,:,:],dim=1)),
+                                     'mask/ir_mean':ir_mask_mean_value,
+                                     'mask/vi_mean':vi_mask_mean_value}
+                    else:
+                        log_dict |= {'fuse': wandb.Image(fus), 
+                                     'visual': wandb.Image(sample['vi']), 
+                                     'infrared':wandb.Image(sample['ir'])}
                     break
             # update scheduler and show lr
             log_dict |= reduce(lambda x, y: x | y, [{f'lr_{i}': v['lr']} for i, v in enumerate(self.optimizer.param_groups)])

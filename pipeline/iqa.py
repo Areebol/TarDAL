@@ -64,6 +64,7 @@ class IQA:
         # forward
         self.extractor.eval()
         img_list = sorted(Path(src / modality).rglob('*.png'))
+        # img_list = sorted(Path(src / modality).rglob('*.jpg'))
         logging.info(f'load {len(img_list)} images from {str(src)}')
         process = tqdm(img_list)
         for img_p in process:

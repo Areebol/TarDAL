@@ -1,0 +1,24 @@
+['001.png'] ssim/ir:0.011477 ssim/vi:0.246648
+['006.png'] ssim/ir:0.007612 ssim/vi:0.301073
+['007.png'] ssim/ir:0.007124 ssim/vi:0.301702
+['008.png'] ssim/ir:0.008392 ssim/vi:0.309216
+['011.png'] ssim/ir:0.039702 ssim/vi:0.278746
+['012.png'] ssim/ir:0.047174 ssim/vi:0.280009
+['013.png'] ssim/ir:0.006262 ssim/vi:0.174796
+['014.png'] ssim/ir:0.019381 ssim/vi:0.305870
+['015.png'] ssim/ir:0.021092 ssim/vi:0.349289
+['016.png'] ssim/ir:0.072486 ssim/vi:0.278847
+['020.png'] ssim/ir:0.045854 ssim/vi:0.355729
+['021.png'] ssim/ir:0.014058 ssim/vi:0.309998
+['023.png'] ssim/ir:0.009585 ssim/vi:0.271236
+['025.png'] ssim/ir:0.002770 ssim/vi:0.099140
+['028.png'] ssim/ir:0.008171 ssim/vi:0.224926
+['029.png'] ssim/ir:0.016334 ssim/vi:0.258079
+['030.png'] ssim/ir:0.039189 ssim/vi:0.256688
+['032.png'] ssim/ir:0.009915 ssim/vi:0.256261
+['033.png'] ssim/ir:0.009081 ssim/vi:0.098274
+['034.png'] ssim/ir:0.005416 ssim/vi:0.174132
+['035.png'] ssim/ir:0.003473 ssim/vi:0.133639
+['036.png'] ssim/ir:0.103151 ssim/vi:0.509558
+shape of sample : [[352, 472]]
+elapsed time for running 22 samples : 1.0261654203588313s

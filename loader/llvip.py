@@ -10,26 +10,19 @@ from torchvision.transforms import Resize
 
 from config import ConfigDict
 from loader.utils.checker import check_mask, check_image, check_iqa, get_max_size
-from loader.utils.reader import gray_read, ycbcr_read, img_write, rgb_read
+from loader.utils.reader import gray_read, ycbcr_read, img_write
 
-class M3FD(Dataset):
+class LLVIP(Dataset):
     type = 'fuse'  # dataset type: 'fuse' or 'fuse & detect'
     color = True  # dataset visible format: false -> 'gray' or true -> 'color'
 
-    def __init__(self, root: str | Path, mode: Literal['train', 'val'], config: ConfigDict, 
-                 method: Literal['Brightness','Snow','Fog','Contrast']=None,severity_level: int=1):
+    def __init__(self, root: str | Path, mode: Literal['train', 'val'], config: ConfigDict):
         super().__init__()
         root = Path(root)
         self.root = root
         self.mode = mode
         # read corresponding list
-        if mode == 'corrupt':
-            img_list = Path(root / 'meta' / f'pred.txt').read_text().splitlines()
-            self.method = method
-            self.severity_level = severity_level
-        else:
-            img_list = Path(root / 'meta' / f'{mode}.txt').read_text().splitlines()
-            
+        img_list = Path(root / 'meta' / f'{mode}.txt').read_text().splitlines()
         logging.info(f'load {len(img_list)} images from {root.name}')
         self.img_list = img_list
 
@@ -62,8 +55,6 @@ class M3FD(Dataset):
         match self.mode:
             case 'train' | 'val':
                 return self.train_val_item(index)
-            case 'corrupt':
-                return self.corrupt_item(index)
             case _:
                 return self.pred_item(index)
 
@@ -112,35 +103,12 @@ class M3FD(Dataset):
 
         # return as expected
         return sample
-    
-    def corrupt_item(self, index: int) -> dict:
-        # image name, like '003.png'
-        name = self.img_list[index]
-        logging.debug(f'pred mode: loading item {name}')
-
-        # load infrared and visible
-        ir = gray_read(self.root / 'ir' / name)
-        # original vi
-        o_vi, o_cbcr = ycbcr_read(self.root / 'vi' / name)
-        # input vi
-        vi, cbcr = ycbcr_read(self.root / f'{self.method}' / f'{self.severity_level}' / name)
-
-        # transform (resize)
-        s = ir.shape[1:]
-        t = torch.cat([ir, o_vi, o_cbcr, vi, cbcr], dim=0)
-        ir, o_vi, o_cbcr, vi, cbcr = torch.split(self.transform_fn(t), [1, 1, 2, 1, 2], dim=0)
-
-        # merge data
-        sample = {'name': name, 'ir': ir, 'o_vi': o_vi, 'vi': vi, 
-                  'cbcr': cbcr, 'o_cbcr': o_cbcr, 'shape': s}
-        # return as expected
-        return sample
 
     @staticmethod
-    def pred_save(fus: Tensor, names: List[str | Path], shape: List[Size], text: str=None):
+    def pred_save(fus: Tensor, names: List[str | Path], shape: List[Size]):
         for img_t, img_p, img_s in zip(fus, names, shape):
             img_t = resize(img_t, img_s)
-            img_write(img_t, img_p, text)
+            img_write(img_t, img_p)
 
     @staticmethod
     def collate_fn(data: List[dict]) -> dict:

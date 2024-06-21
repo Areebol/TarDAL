@@ -11,8 +11,8 @@ from config import from_dict
 if __name__ == '__main__':
     # args parser
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', default='config/default.yaml', help='config file path')
-    parser.add_argument('--auth', help='wandb auth api key')
+    parser.add_argument('--cfg', default='/mnt/cephfs/home/areebol/sensors/TarDAL/config/tardal-train.yaml', help='config file path')
+    parser.add_argument('--auth', default='aecdc69b1a817efc605df2d5be9dd7face113d04', help='wandb auth api key')
     args = parser.parse_args()
 
     # init config
@@ -29,19 +29,7 @@ if __name__ == '__main__':
     torch.autograd.set_detect_anomaly(True)
 
     # choose train script
-    logging.info(f'enter {config.strategy} train mode')
-    match config.strategy:
-        case 'fuse':
-            train_p = getattr(scripts, 'TrainF')
-        case 'detect':
-            if config.loss.bridge.fuse != 0:
-                logging.warning('overwrite fuse loss weight to 0')
-                config.loss.bridge.fuse = 0
-            train_p = getattr(scripts, 'TrainFD')
-        case 'fuse & detect':
-            train_p = getattr(scripts, 'TrainFD')
-        case _:
-            raise ValueError(f'unknown strategy: {config.strategy}')
+    train_p = getattr(scripts, 'TrainF')
 
     # create script instance
     train = train_p(config, wandb_key=args.auth)

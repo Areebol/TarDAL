@@ -35,7 +35,11 @@ class Fuse:
 
         # init tardal generator
         f_dim, f_depth = config.fuse.dim, config.fuse.depth
-        generator = Generator(dim=f_dim, depth=f_depth)
+        if config.fuse.mask:
+            generator = Generator(dim=f_dim, depth=f_depth, 
+                                  is_mask=config.fuse.mask, mask_type=config.fuse.mask_type)
+        else:
+            generator = Generator(dim=f_dim, depth=f_depth)
         modules.append(generator)
         logging.info(f'init generator with (dim: {f_dim} depth: {f_depth})')
         self.generator = generator
@@ -51,6 +55,7 @@ class Fuse:
 
         # load pretrained parameters (optional)
         f_ckpt = config.fuse.pretrained
+        logging.info(f'loading pretrained model from {f_ckpt}')
         if f_ckpt is not None:
             if 'http' in f_ckpt:
                 ckpt_p = Path.cwd() / 'weights' / 'v1' / 'tardal.pth'

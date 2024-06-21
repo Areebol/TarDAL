@@ -23,6 +23,9 @@ def ycbcr_read(img_path: str | Path) -> Tuple[Tensor, Tensor]:
     y, cbcr = torch.split(img_t, [1, 2], dim=0)
     return y, cbcr
 
+def rgb_read(img_path: str | Path) -> Tensor:
+    img_n = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+    return img_n
 
 def label_read(label_path: str | Path) -> Tensor:
     target = numpy.loadtxt(str(label_path), dtype=numpy.float32)
@@ -31,10 +34,16 @@ def label_read(label_path: str | Path) -> Tensor:
     return labels
 
 
-def img_write(img_t: Tensor, img_path: str | Path):
+def img_write(img_t: Tensor, img_path: str | Path, text: str=None):
     if img_t.shape[0] == 3:
         img_t = rgb_to_bgr(img_t)
     img_n = tensor_to_image(img_t.squeeze().cpu()) * 255
+    if text:
+        img_n = numpy.ascontiguousarray(img_n)
+        cv2.putText(img_n, text, (5, 25), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 
+                    1, (0, 0, 255), 2, 
+                    cv2.LINE_AA)
     cv2.imwrite(str(img_path), img_n)
 
 
@@ -43,3 +52,15 @@ def label_write(pred_i: Tensor, txt_path: str | Path):
         line = (cls, *pos, conf)
         with txt_path.open('a') as f:
             f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
+def img_text(img_t: Tensor, text: str=None):
+    if img_t.shape[0] == 3:
+        img_t = rgb_to_bgr(img_t)
+    img_n = tensor_to_image(img_t.squeeze().cpu()) * 255
+    if text:
+        img_n = numpy.ascontiguousarray(img_n)
+        cv2.putText(img_n, text, (5, 25), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 
+                    1, (0, 0, 255), 2, 
+                    cv2.LINE_AA)
+    return img_n

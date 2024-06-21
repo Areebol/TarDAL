@@ -3,9 +3,9 @@
 
 # Base ----------------------------------------
 numpy>=1.20
-torch>=1.9
-torchvision>=0.10
-kornia>=0.6.8
+# torch>=1.9
+# torchvision>=0.10
+kornia
 opencv-python>=4.5.5.64
 PyYAML>=6.0
 pandas>=1.5.1
